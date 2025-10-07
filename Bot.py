@@ -1,7 +1,5 @@
 import os
 import logging
-from flask import Flask
-from threading import Thread
 from telebot import TeleBot, types
 from dotenv import load_dotenv
 
@@ -14,21 +12,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-# Flask app for port binding
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "ð¤ Telegram Bot is running!"
-
-def run_flask():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run_flask)
-    t.daemon = True
-    t.start()
 
 print("ð PREMIUM TELEGRAM BOT - STARTING...")
 
@@ -120,14 +103,14 @@ PAYMENT_INFO = {
         "ðª BNB (BEP20): YOUR_BNB_ADDRESS", 
         "ð± Binance Pay: YOUR_PAY_ID"
     ],
-    'contact_admin': "t.me/flexxerone"
+    'contact_admin': "@t.me/flexxerone"
 }
 
 # Store users and their tiers
 premium_users = set()
 full_premium_users = set()
 
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     """Handle /start command"""
     user = message.from_user
@@ -176,22 +159,29 @@ def send_welcome(message):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
     """Handle inline button clicks"""
-    user_id = call.from_user.id
-    
-    if call.data == "free_solutions":
-        show_free_solutions(call)
-    elif call.data == "pricing_tiers":
-        show_pricing_tiers(call)
-    elif call.data == "terms":
-        show_terms(call)
-    elif call.data == "contact_admin":
-        contact_admin(call)
-    elif call.data == "my_account":
-        show_my_account(call)
-    elif call.data == "premium_info":
-        show_tier_info(call, 'premium')
-    elif call.data == "full_premium_info":
-        show_tier_info(call, 'full_premium')
+    try:
+        user_id = call.from_user.id
+        
+        if call.data == "free_solutions":
+            show_free_solutions(call)
+        elif call.data == "pricing_tiers":
+            show_pricing_tiers(call)
+        elif call.data == "terms":
+            show_terms(call)
+        elif call.data == "contact_admin":
+            contact_admin(call)
+        elif call.data == "my_account":
+            show_my_account(call)
+        elif call.data == "premium_info":
+            show_tier_info(call, 'premium')
+        elif call.data == "full_premium_info":
+            show_tier_info(call, 'full_premium')
+        elif call.data == "back_main":
+            back_to_main(call)
+            
+    except Exception as e:
+        logger.error(f"Callback error: {e}")
+        bot.answer_callback_query(call.id, "â Error occurred, please try again.")
 
 def show_free_solutions(call):
     """Show free solutions menu"""
@@ -365,7 +355,7 @@ def show_my_account(call):
 ð Your Access:
 """
     
-    for feature in features[:6]:  # Show first 6 features
+    for feature in features[:6]:
         response += f"â¢ {feature}\n"
     
     if len(features) > 6:
@@ -418,10 +408,13 @@ For payments, support, or questions:
         reply_markup=markup
     )
 
-@bot.callback_query_handler(func=lambda call: call.data == "back_main")
 def back_to_main(call):
     """Return to main menu"""
-    send_welcome(call.message)
+    try:
+        send_welcome(call.message)
+    except:
+        # If editing fails, send new message
+        send_welcome(call.message)
 
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
@@ -431,7 +424,7 @@ def handle_all_messages(message):
 def main():
     """Start the bot"""
     print("=" * 60)
-    print("ð¤ 2-TIER PREMIUM BOT - READY TO EARN!")
+    print("ð¤ 2-TIER PREMIUM BOT - STARTING...")
     print("=" * 60)
     print(f"ð Premium Tier: ${PREMIUM_CONTENT['premium']['price']}")
     print(f"â¡ Full Premium: ${PREMIUM_CONTENT['full_premium']['price']}")
@@ -439,22 +432,17 @@ def main():
     print("ð Clear Terms & Warnings Included")
     print("=" * 60)
     
-    # Start Flask server for port binding
-    keep_alive()
-    print("â Flask server started on port 8080")
-    
     try:
-        print("â Bot is running and polling for messages...")
+         print("â Bot is running and polling for messages...")
         print("ð± Test your bot by sending /start on Telegram")
         print("=" * 60)
         
-        # Start the bot
-        bot.infinity_polling()
+        # Remove Flask and start bot directly
+        bot.infinity_polling(timeout=60, long_polling_timeout=60)
         
     except Exception as e:
         logger.error(f"â Failed to start bot: {e}")
+        print(f"â Error: {e}")
 
 if __name__ == '__main__':
-    main()
-    
-        
+  main()
